@@ -1,0 +1,669 @@
+---
+title: "part 1 and 2"
+author: "Snow"
+date: "9/7/2021"
+output: word_document
+---
+## Define the question
+You are a Data analyst at Carrefour Kenya and are currently undertaking a project that will inform the marketing department on the most relevant marketing strategies that will result in the highest no. of sales (total price including tax). 
+
+## Metric for success
+
+In order to work on the above problem, you need to do the following:
+
+-   Define the question- the metric for success, the context,experimental design taken and the appropriateness of the available data to answer the given question.
+
+-   Find and deal with outliers, anomalies, and missing data within the dataset.
+
+-   Perform univariate and bivariate analysis.
+
+-   From your insights provide a conclusion and recommendation.
+
+-   Build a model using classification using decision trees and Support Vector Machine 
+
+-   Get an accuracy => 80%
+
+
+## Data Understanding (the context)
+
+Your project has been divided into four parts where you'll explore a recent marketing dataset by performing various unsupervised learning techniques and later providing recommendations based on your insights.
+1. Part 1: Dimensionality Reduction
+2. Part 2: Feature Selection
+3. Part 3: Association Rules
+4. Part 4: Anomaly Detection
+
+
+In order to work on the above problem, you need to do the following:
+
+-   Define the question, the metric for success, the context, experimental design taken and the appropriateness of the available data to answer the given question.
+
+-   Find and deal with outliers, anomalies, and missing data within the dataset.
+
+-   Perform univariate and bivariate analysis.
+
+-   From your insights provide a conclusion and recommendation.
+
+-   Build models and get the metrics
+
+    ## Experimental design
+
+1.  Import the data to R
+2.  Perform data exploration
+3.  Define metrics for success
+4.  Perform Univariate and Bivariate data Analysis
+5.  Provide conclusion
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(superml)
+library(naniar)
+library(ggplot2)
+library(Rtsne)
+library(data.table)
+library(ggbiplot)
+library(tibbletime)
+```
+
+#Part 1
+```{r}
+df <- fread("http://bit.ly/CarreFourDataset")
+head(df)
+
+```
+```{r}
+dim(df)
+```
+
+
+
+## Data cleaning processes.
+```{r}
+df.copy <- copy(df)
+```
+
+```{r}
+# clean data by changing the names of columns
+# First we need to change the column names to lowercase and remove and replace spaces with an underscore. 
+# replace the spaces with underscores using gsub() function
+names(df) <- gsub(" ","_", names(df))
+
+# lowercase
+names(df) <- tolower(names(df))
+
+# display the column names to confirm the changes
+colnames(df)
+
+```
+
+```{r}
+# check for missing and duplicates
+gg_miss_var(df, show_pct = TRUE)
+colSums(is.na(df))
+
+```
+
+From the dataset there is no row with missing data. 
+Now, let's check for duplicates. 
+
+```{r}
+# Duplicates
+dup <- df[duplicated(df),]
+dup
+```
+There is also no duplicates in the data.  
+
+##Univarate Bivatiate and Multivariate Analysis (EDA)
+```{r}
+head(df)
+```
+```{r}
+boxplot(df$unit_price,col='grey', main = 'Unit Price')
+boxplot(df$quantity,col='grey', main = 'Quantity Boxplot')
+boxplot(df$tax,col='grey', main = 'Tax boxplot')
+boxplot(df$cogs,col='grey', main = 'COGS')
+boxplot(df$gross_margin_percentage,col='grey', main = 'Gross margin percentage')
+boxplot(df$gross_income,col='grey', main = 'Gross income')
+boxplot(df$total,col='grey', main = 'Total')
+```
+On the numerical columns, there are a few outliers. However, we will not drop these outliers because they might part of some gooods with high taxes hence the overall price will be higher. 
+
+```{r}
+head(df)
+```
+
+The next step would be to find the frequency on the different categorical columns 
+```{r}
+# Frequency of categorical columns
+#Branch , customer_type, Gender, productline , payment
+branch <- table(df$branch)
+barplot(branch, col = "steelblue")
+
+customer_type_freq <- table (df$customer_type)
+barplot(customer_type_freq, col = "steelblue")
+
+gender <- table(df$gender)
+barplot(gender, col = "steelblue")
+
+product_line <- table(df$product_line)
+barplot(product_line, col = "steelblue")
+
+payment <- table(df$payment)
+barplot(payment, col = "steelblue")
+```
+From the bar plots above we can conclude that:
+- The data is collected on Branches A, B and C equally.
+- The information collected was half from the members and half from the normal customers. 
+- The gender was equally balances in the data.
+- Most people paid their bills with E wallet and cash rather than Credit card
+
+```{r}
+ggplot(df, aes(fill=payment, y= payment, x=branch)) + 
+    geom_bar(position="dodge", stat="identity")
+```
+
+From the data, Ewallet payments are the most popular in all the three branches. 
+
+
+```{r}
+ggplot(df, aes(fill=product_line, y= product_line, x=branch)) + 
+    geom_bar(position="stack", stat="identity")
+```
+
+From the plot, Branch B sells more sports and travel goods than the other branches. 
+Branch A sells more home and lifestyle goods than the other branches. 
+Therefore, the marketing team should stack these branches with the product with which they sell more. 
+
+```{r}
+ggplot(df, aes(fill=gender, y= gender, x=branch)) + 
+    geom_bar(position="stack", stat="identity")
+```
+There are more males in the Carrefour branches than the females. This is not what many people assume as many people erroneously think that there are usually more females doing shopping. 
+
+Measures of central tendency for the numerical columns 
+```{r}
+# numerical columns. 
+num_col <- unlist(lapply(df, is.numeric))
+
+
+df_num <- subset(df, select = num_col)
+
+head (df_num)
+```
+
+```{r}
+#Getting the measures of dispersion in the numerical columns. 
+
+summary_stats <- data.frame(
+  Mean = apply(df_num, 2, mean), 
+  Median = apply(df_num, 2, median), 
+  Min = apply(df_num, 2, min),  
+  Max = apply(df_num, 2, max)) 
+summary_stats
+
+
+```
+
+
+```{r}
+# Define the function 
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+```
+
+```{r}
+# Mode
+mode.unit_price <- df$unit_price
+mode.unit_price
+mode.quantity <- df$quantity
+mode.quantity
+mode.tax <- df$tax
+mode.tax
+mode.cogs <- df$cogs
+mode.cogs
+mode.gross_income <- df$gross_income
+mode.gross_income
+mode.rating <- df$rating
+mode.rating
+mode.total  <- df$total
+mode.total
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+# Label Encoder
+#Branch , customer_type, Gender, productline , payment
+lbl <- LabelEncoder$new()
+lbl$fit(df$branch)
+df$branch <- lbl$fit_transform(df$branch)
+
+lbl$fit(df$customer_type)
+df$customer_type <- lbl$fit_transform(df$customer_type)
+
+lbl$fit(df$gender)
+df$gender <- lbl$fit_transform(df$gender)
+
+lbl$fit(df$product_line)
+df$product_line <- lbl$fit_transform(df$product_line)
+
+lbl$fit(df$payment)
+df$payment <- lbl$fit_transform(df$payment)
+```
+
+```{r}
+str(df)
+```
+```{r}
+# Since the gross margin percentage has only one value we can drop the column. 
+table(df$gross_margin_percentage)
+df$gross_margin_percentage <- NULL
+```
+
+```{r}
+# Drop the categorcal columns 
+df$invoice_id <- NULL
+df$date <- NULL
+df$time <- NULL
+```
+
+```{r}
+# Separate the data 
+df.x <-  df[ , 1:11]
+df.y <-  df[, 12]
+```
+
+```{r}
+head(df.x)
+head(df.y)
+```
+
+```{r}
+# perform tsne
+tsne = Rtsne(df.x, dims = 2,  perplexity = 30)
+```
+
+```{r}
+#visualize TSNE
+
+df.tsne = data.frame(tsne$Y)  
+ggplot(df.tsne, aes(x=X1, y=X2)) + geom_point(size=2)
+```
+## Performing the PCA
+
+```{r}
+# Run the PCA on the df
+dfpca <- prcomp(t(df),center = TRUE, scale=TRUE) 
+
+## plot pc1 and pc2
+plot(dfpca$x[,1], dfpca$x[,2], main = "PCA1 & PCA2 values")
+
+```
+
+```{r}
+# Lets get a summary of the pca
+summary (dfpca)
+```
+```{r}
+## make a scree plot
+pca.var <- dfpca$sdev^2
+pca.var.per <- round(pca.var/sum(pca.var)*100, 1)
+
+barplot(pca.var.per, main="Scree Plot", xlab="Principal Component", ylab="Percent Variation")
+
+```
+
+
+```{r}
+## plot that shows the PCs and the variation:
+
+
+pca.data <- data.frame(Sample=rownames(dfpca$x),
+                       X=dfpca$x[,1],
+                       Y=dfpca$x[,2])
+pca.data
+
+ggplot(data=pca.data, aes(x=X, y=Y, label=Sample)) +
+  geom_text() +
+  xlab(paste("PC1 - ", pca.var.per[1], "%", sep="")) +
+  ylab(paste("PC2 - ", pca.var.per[2], "%", sep="")) +
+  theme_bw() +
+  ggtitle("Customer Data PCA Graph")
+
+```
+PC1 explains 96.5% of the total variance, which means that nearly 96% 
+ of the information in the dataset (11 variables) can be encapsulated 
+ by just that one Principal Component. PC2 explains 3.3% of the variance. etc
+```{r}
+
+library(ggbiplot)
+ggbiplot (prcomp(df))
+```
+
+
+# Part 2: Feature Selection
+
+## using the filter method.
+```{r}
+# Installing and loading our caret package
+suppressWarnings(
+        suppressMessages(if
+                         (!require(caret, quietly=TRUE))
+                install.packages("caret")))
+library(caret)
+```
+
+
+```{r}
+# Installing and loading the corrplot package for plotting
+# ---
+# 
+suppressWarnings(
+        suppressMessages(if
+                         (!require(corrplot, quietly=TRUE))
+                install.packages("corrplot")))
+library(corrplot)
+```
+
+```{r}
+# Calculating the correlation matrix
+correlationMatrix <- cor(df)
+# Find attributes that are highly correlated
+# ---
+highlyCorrelated <- findCorrelation(correlationMatrix, cutoff=0.75)
+highlyCorrelated
+
+#names (df[,highlyCorrelated])
+```
+```{r}
+correlationMatrix
+```
+
+```{r}
+# Names of highly correlations
+names (df[, 7])
+names (df[, 9])
+names (df[, 11])
+```
+
+```{r}
+# Next step is removing the variables with high correlation 
+df_low <- df[-highlyCorrelated]
+df_low$tax <- NULL
+df_low$cogs <- NULL
+df_low$gross_income <- NULL
+
+```
+
+```{r}
+cor2 <- cor(df_low)
+cor2
+```
+
+
+```{r}
+# Performing our graphical comparison
+# ---
+# 
+
+library(stats)
+par(mfrow = c(1, 2))
+corrplot(correlationMatrix, order = "hclust")
+
+corrplot(cor(df_low), order = "hclust")
+
+```
+From the filter method, There are a few columns that have been eliminated because of high such a high correlation:
+- Tax
+- Cogs
+_ Gross Income
+
+
+We should try another method and see what other features we will remain with 
+
+## wrapper method
+```{r}
+
+# Installing and loading our clustvarsel package
+suppressWarnings(
+        suppressMessages(if
+                         (!require(clustvarsel, quietly=TRUE))
+                install.packages("clustvarsel")))
+                         
+library(clustvarsel)
+# Installing and loading our mclust package
+suppressWarnings(
+        suppressMessages(if
+                         (!require(mclust, quietly=TRUE))
+                install.packages("mclust")))
+library(mclust)
+```
+
+```{r}
+
+# Sequential forward greedy search (default)
+#
+out = clustvarsel(df_low, G = 1:5)
+out
+```
+For the wrapper method only a few columns have been selected for modelling. these are:
+- Total
+- Quantity
+- Unit Price
+
+## Embended methods
+```{r}
+suppressWarnings(
+        suppressMessages(if
+                         (!require(wskm, quietly=TRUE))
+                install.packages("wskm")))
+library(wskm)
+
+set.seed(2)
+model <- ewkm(df_low, 3, lambda=2, maxiter=1000)
+
+```
+
+```{r}
+suppressWarnings(
+        suppressMessages(if
+                         (!require(cluster, quietly=TRUE))
+                install.packages("cluster")))
+library("cluster")
+
+clusplot(df_low, model$cluster, color=TRUE, cor = TRUE, shade=TRUE,
+         labels=2, lines=1,main='Cluster Analysis for df')
+```
+
+
+```{r}
+# Weights are calculated for each variable and cluster. 
+# They are a measure of the relative importance of each variable 
+# with regards to the membership of the observations to that cluster. 
+# The weights are incorporated into the distance function, 
+# typically reducing the distance for more important variables.
+# Weights remain stored in the model and we can check them as follows:
+# 
+round(model$weights*100,2)
+
+```
+
+
+# Part 3
+```{r}
+library(arules)
+```
+
+
+```{r}
+path <- "http://bit.ly/SupermarketDatasetII"
+
+Transactions<-read.transactions(path, sep = ",")
+Transactions
+```
+```{r}
+# verifying the object class
+class(Transactions)
+```
+
+```{r}
+# Previewing our first 5 transactions
+inspect(Transactions[1:5])
+```
+
+```{r}
+# preview the items that make up our dataset,
+# alternatively we can do the following
+# ---
+# 
+items<-as.data.frame(itemLabels(Transactions))
+colnames(items) <- "Item"
+head(items, 10)
+
+```
+
+```{r}
+# Generating a summary of the transaction dataset
+# ---
+# This would give us some information such as the most purchased items, 
+# distribution of the item sets (no. of items purchased in each transaction), etc.
+summary(Transactions)
+```
+In the dataset, the most frequently bought item is Mineral water followed by eggs.  
+```{r}
+# Exploring the frequency of some articles
+ 
+itemFrequency(Transactions[, 8:10],type = "absolute")
+round(itemFrequency(Transactions[, 8:10],type = "relative")*100,2)
+```
+
+```{r}
+# Producing a chart of frequencies and filtering 
+# to consider only items with a minimum percentage 
+# of support/ considering a top x of items
+# ---
+# Displaying top 10 most common items in the transactions dataset 
+# and the items whose relative importance is at least 10%
+# 
+par(mfrow = c(1, 2))
+
+# plot the frequency of items
+itemFrequencyPlot(Transactions, topN = 10,col="darkgreen")
+itemFrequencyPlot(Transactions, support = 0.1,col="darkred")
+```
+
+
+```{r}
+
+# Building a model based on association rules 
+# We use Min Support as 0.001 and confidence as 0.8
+rules <- apriori (Transactions, parameter = list(supp = 0.001, conf = 0.8))
+rules
+```
+Using a confidence level of 0.80 and support of 0.001 we have a model with 74 rules. 
+An increase in minimum support will result in a decrease in the number of rules by the model. 
+However, a slight decrease in the confidence level will result in a huge increase in the rules created by the models. 
+```{r}
+# Lets get more information on the rules formed
+# More statistical information such as support, lift and confidence is also provided.
+# ---
+# 
+summary(rules)
+```
+The set of 74 rules  has a maximum rule length of 6 and a minimum of 3. 
+```{r}
+# lets take a peek at the first 5 rules of the associative model formed. 
+
+inspect(rules[1:5])
+```
+The interpretation of this will require the understanding of several words. 
+- Support -> How popular an itemset is, as measured by the proportion of transactions in which an itemset appears. 
+- Confidence -> How often one item A appears whenever another item B appears in a transaction. This is usually a conditional probability.
+- Lift -> A rule with a lift of > 1 it would imply that those two occurrences are dependent on one another and useful for predicting.
+
+Thus in the 5th rule with a confidence level ~ 0.95 means that it is very likely that these three items are bought together by every customer. 
+
+```{r}
+# So lets sort the rules by the conficence levels to see the items are mostly bought together
+
+
+rules<-sort(rules, by="confidence", decreasing=TRUE)
+inspect(rules[1:5])
+```
+
+The following rules with a confidence level of 1 means that the items are almost always bought in that combination. Therefore, the marketing division would have to find a way to create promotions on these items. 
+For instance, a promotion campaign would be like buy french fries and get 50 percent off on Mushroom cream sauce. 
+
+
+# Part 4: Anomaly Detection
+```{r}
+# Installing anomalize package
+# ---
+# 
+install.packages("anomalize")
+```
+
+
+```{r}
+# Load tidyverse and anomalize
+# ---
+# 
+library(tidyverse)
+library(anomalize)
+```
+
+
+```{r}
+# load data and convert it to as_tbl_time
+anom <- read.csv('http://bit.ly/CarreFourSalesDataset')
+head(anom)   
+
+```
+First we have to format the Date column as date attribute. 
+```{r}
+# conversion to date
+anom$Date <- as.Date(anom$Date , format = "%m/%d/%y")
+dim(anom)
+```
+
+For the Carrefour sales data, there are 1000 rows and 2 columns
+
+```{r}
+library(naniar)
+gg_miss_var(anom, show_pct = TRUE)
+colSums(is.na(anom))
+```
+There are no missing values in the sales Data 
+First lets convert the df to a different format. 
+```{r}
+anomX <- as_tbl_time(anom, Date)
+class(anomX)
+plot (anomX)
+```
+
+
+
+```{r}
+# Anomalize 
+
+anomX %>%
+    time_decompose(Sales) %>%
+    anomalize(remainder) %>%
+    time_recompose() %>%
+    plot_anomalies(time_recomposed = TRUE, ncol = 3, alpha_dots = 0.5)
+```
+
+
+
+
+
+
