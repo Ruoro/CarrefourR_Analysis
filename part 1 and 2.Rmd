@@ -19,9 +19,9 @@ In order to work on the above problem, you need to do the following:
 
 -   From your insights provide a conclusion and recommendation.
 
--   Build a model using classification using decision trees and Support Vector Machine 
+-   Build an associative model and visualize some of the rules
 
--   Get an accuracy => 80%
+-   Create a plot of anomalies using the dataset provided. 
 
 
 ## Data Understanding (the context)
@@ -43,7 +43,7 @@ In order to work on the above problem, you need to do the following:
 
 -   From your insights provide a conclusion and recommendation.
 
--   Build models and get the metrics
+-   Build the associative model and inspect the rules.
 
     ## Experimental design
 
@@ -51,6 +51,7 @@ In order to work on the above problem, you need to do the following:
 2.  Perform data exploration
 3.  Define metrics for success
 4.  Perform Univariate and Bivariate data Analysis
+5.  Build an associative model 
 5.  Provide conclusion
 
 
@@ -218,19 +219,19 @@ getmode <- function(v) {
 
 ```{r}
 # Mode
-mode.unit_price <- df$unit_price
+mode.unit_price <- getmode(df$unit_price)
 mode.unit_price
-mode.quantity <- df$quantity
+mode.quantity <- getmode(df$quantity)
 mode.quantity
-mode.tax <- df$tax
+mode.tax <- getmode(df$tax)
 mode.tax
-mode.cogs <- df$cogs
+mode.cogs <- getmode(df$cogs)
 mode.cogs
-mode.gross_income <- df$gross_income
+mode.gross_income <- getmode(df$gross_income)
 mode.gross_income
-mode.rating <- df$rating
+mode.rating <- getmode(df$rating)
 mode.rating
-mode.total  <- df$total
+mode.total  <- getmode(df$total)
 mode.total
 
 ```
@@ -609,7 +610,7 @@ For instance, a promotion campaign would be like buy french fries and get 50 per
 # Installing anomalize package
 # ---
 # 
-install.packages("anomalize")
+#install.packages("anomalize")
 ```
 
 
@@ -649,19 +650,35 @@ anomX <- as_tbl_time(anom, Date)
 class(anomX)
 plot (anomX)
 ```
+```{r}
+#install.packages("devtools")
+#devtools::install_github("twitter/AnomalyDetection")
+library(AnomalyDetection)
+
+```
+```{r}
+
+sales_an <- AnomalyDetectionVec (x = anomX$Sales,period = 3 , direction= "both", plot = TRUE)
+```
 
 
 
 ```{r}
 # Anomalize 
 
-anomX %>%
-    time_decompose(Sales) %>%
-    anomalize(remainder) %>%
-    time_recompose() %>%
-    plot_anomalies(time_recomposed = TRUE, ncol = 3, alpha_dots = 0.5)
+#anomX %>%
+#    time_decompose(dates) %>%
+#    anomalize(remainder) %>%
+#    time_recompose() %>%
+#    plot_anomalies(time_recomposed = TRUE, ncol = 3, alpha_dots = 0.5)
 ```
 
+
+# Conclusions
+The data provided was accurate and more than sufficient to perform all the analysis that was initially intended for the project. 
+The marketing team will find insight and leads on various topics such as:
+- product distribution.
+- marketing strategies and much more
 
 
 
