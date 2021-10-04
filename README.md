@@ -5,18 +5,13 @@ P
 ##### Carrefour Analysis in R 10/9/2021
 By **JOHN RUORO**
 ## Description
-Nairobi Hospital conducted a clinical camp to test for hypothyroidism. The data collected focused on Thyroid patients. Using the healthcare datasets provided the following tasks were accomplished:  
+The analysis was centered around the regions leading supermarket. The supermarket provided the data of the buyers and the association list. The objective of this project was to provide meaningful insights to the marketing team and also to find out the Apriori association models.  
 
--Build a model that determines whether or not the patient's symptoms indicate that the patient has hypothyroid.
-The models created and tested include:
-- Base Model (Linear Regression)
-- Random Forest
-- AdaBoost
-- Gradient Boost Model 
-- SVM model
-- Polunomial Kernel
-- Sigmound kernel 
-- RBF kernel model 
+The data analysis took place in the following satges 
+- Data Preparation and cleaning
+- Data analysis 
+- Bivariate and Multivariate Analysis
+- Association Models
 
 The models were trained and tested on the data and the accuracy metrics for all the models compared. 
 ## Setup/Installation Requirements
@@ -25,8 +20,9 @@ initialize the ipynb notebook directly on Google colabs
 ## Known Bugs
 No Known Bugs
 ## Technologies Used
-Jupyter Notebook 
-Python
+R-studio
+R markdown 
+Google Docs
 ## Support and contact details
 John Ruoro
 ### License
